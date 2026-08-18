@@ -1,0 +1,25 @@
+#!/bin/bash
+#
+# Wrapper do CLI claude-chat para o PATH.
+#
+# Instalação:
+#   1. Copie este script para ~/.hermes/claude-chat (ou qualquer diretório
+#      no seu PATH).
+#   2. Ajuste PLUGIN_PATH para o diretório onde o plugin está instalado
+#      (padrão do Hermes: ~/.hermes/plugins/claude-chat-index).
+#
+# Uso: claude-chat <command> [args]
+# Comandos: list, search <term>, absorb <number>, --help
+
+# Diretório do plugin (o plugin usa $HOME/.claude, então HOME deve estar setado)
+PLUGIN_PATH="${CLAUDE_CHAT_PLUGIN_DIR:-$HOME/.hermes/plugins/claude-chat-index}"
+
+if [ ! -f "$PLUGIN_PATH/src/cli.js" ]; then
+    echo "Error: Claude Chat Index plugin not found at $PLUGIN_PATH/src/cli.js"
+    echo "Instale com: hermes plugins install git@github.com:erickstryck/claude-chat-index.git"
+    echo "Ou defina CLAUDE_CHAT_PLUGIN_DIR para o diretório do plugin."
+    exit 1
+fi
+
+# exec: substitui o processo de shell pelo node (sem processo pai extra)
+exec node "$PLUGIN_PATH/src/cli.js" "$@"

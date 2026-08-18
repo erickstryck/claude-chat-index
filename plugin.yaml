@@ -1,0 +1,22 @@
+# Hermes plugin manifest for claude-chat-index.
+#
+# This file is what lets `hermes plugins install` recognize the repository as a
+# valid, updatable Hermes plugin (see hermes_cli/plugins_cmd.py:_read_manifest).
+# Without it the installer clones the files but warns "may not be a valid plugin"
+# and can't track the source for `hermes plugins update`.
+name: claude-chat-index
+version: 1.0.0
+description: >
+  CLI plugin that catalogs, indexes, and retrieves Claude Code conversations.
+  Lists conversations by recency, searches by term, and absorbs a conversation's
+  context into the Hermes agent. When enabled, registers the `hermes claude-chat`
+  command and a `claude_chat` agent tool. Zero dependencies (Node.js >= 18, ESM),
+  100% local.
+author: Erick Batista
+homepage: https://github.com/erickstryck/claude-chat-index
+license: MIT
+# kind: standalone — a self-contained tool that adds no core model tools.
+# Standalone plugins stay opt-in (enabled via `hermes plugins enable`), which is
+# exactly what we want for a helper CLI.
+kind: standalone
+category: productivity

@@ -1,0 +1,29 @@
+{
+  "name": "claude-chat-index",
+  "version": "1.0.0",
+  "description": "Plugin para catalogar, indexar e recuperar conversas do Claude Code no Hermes Agent",
+  "type": "module",
+  "main": "src/cli.js",
+  "scripts": {
+    "list": "node src/cli.js list",
+    "search": "node src/cli.js search",
+    "absorb": "node src/cli.js absorb",
+    "verify": "node scripts/verify-plugin.mjs"
+  },
+  "bin": {
+    "claude-chat": "./src/cli.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "claude",
+    "chat",
+    "index",
+    "hermes",
+    "plugin"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {}
+}
