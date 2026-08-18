@@ -1,6 +1,9 @@
-# Claude Chat Index - Reference Guide
+# Claude Chat Index — Reference Guide
 
 This file contains reference information for using the Claude Chat Index plugin effectively.
+
+All examples use the installed `claude-chat` command (or `hermes claude-chat` when the
+plugin is enabled). The plugin only reads `~/.claude/history.jsonl`.
 
 ## Use Cases
 
@@ -10,12 +13,12 @@ When you need to continue a conversation from Claude Code that was interrupted:
 
 ```bash
 # Step 1: Find the conversation
-node .github/plugins/claude-chat-index/src/cli.js search <topic>
+claude-chat search <topic>
 
-# Step 2: Absorb the context
-node .github/plugins/claude-chat-index/src/cli.js absorb <number>
+# Step 2: Emit the full context
+claude-chat absorb <number>
 
-# Step 3: Use in Hermes with continuation prompt
+# Step 3: Feed that block as input context to the next Hermes task
 ```
 
 ### 2. Cross-Reference Previous Solutions
@@ -23,10 +26,9 @@ node .github/plugins/claude-chat-index/src/cli.js absorb <number>
 When encountering a similar problem:
 
 ```bash
-# Search for related solutions
-node .github/plugins/claude-chat-index/src/cli.js search "migration entities"
-node .github/plugins/claude-chat-index/src/cli.js search "rebase conflicts"
-node .github/plugins/claude-chat-index/src/cli.js search "kvstore"
+claude-chat search "migration"
+claude-chat search "rebase"
+claude-chat search "config"
 ```
 
 ### 3. Audit Conversation History
@@ -34,12 +36,8 @@ node .github/plugins/claude-chat-index/src/cli.js search "kvstore"
 When you need to understand what work was done:
 
 ```bash
-# List all recent conversations
-node .github/plugins/claude-chat-index/src/cli.js list
-
-# Filter by project
-node .github/plugins/claude-chat-index/src/cli.js search airthings
-node .github/plugins/claude-chat-index/src/cli.js search famis360
+claude-chat list
+claude-chat search <project-or-topic>
 ```
 
 ## Integration Patterns
@@ -52,11 +50,10 @@ node .github/plugins/claude-chat-index/src/cli.js search famis360
    - "Buscar conversas sobre [termo]"
    - "Absorver conversa [numero]"
 
-### With Other Skills
+### With Other Tools
 
-- **tickets**: Create ClickUp tasks based on absorbed conversation findings
-- **plan**: Generate action plans from absorbed context
-- **hermes-agent**: Configure Hermes based on lessons learned
+The `absorb` block is plain text — pipe it into any tool that accepts an input context
+(other agent session, LLM prompt, note file you write yourself, etc.).
 
 ## Output Format
 
@@ -82,59 +79,60 @@ Total de mensagens: <count>
 
 ## Common Search Terms
 
-Based on project history:
+Examples of the kinds of terms that match well (case-insensitive, matched against
+title, project path, and message text):
 
 | Term | Typical Use |
 |------|-------------|
 | `rebase` | Git conflict resolution |
-| `migration` | Entity migration workflows |
-| `airthings` | Airthings connector work |
-| `entities` | Entity definition and mapping |
-| `kvstore` | Key-value store implementation |
-| `provision` | Provisioning workflows |
-| `webhook` | Webhook handling |
-| `place-mapping` | Legacy place mapping |
+| `migration` | Data/entity migration workflows |
+| `config` | Configuration changes |
+| `test` | Test runs and fixes |
+| `deploy` | Deployment steps |
 
 ## Troubleshooting
 
 ### "Nenhuma conversa encontrada"
 
-**Cause**: No conversations in history or search term doesn't match.
+**Cause**: No conversations in history, or the search term doesn't match.
 
-**Solution**: 
+**Solution**:
 1. Use `list` to see all available conversations
 2. Try broader search terms
 3. Verify Claude Code was used (`~/.claude/history.jsonl` exists)
 
 ### "Arquivo de histórico não encontrado"
 
-**Cause**: Claude Code hasn't been used yet or history file was deleted.
+**Cause**: Claude Code hasn't been used yet or the history file was deleted.
 
 **Solution**: Use Claude Code at least once to create the history file.
 
 ### Wrong conversation absorbed
 
-**Cause**: Index mismatch between list and absorb.
+**Cause**: Index mismatch between `list` and `absorb`.
 
-**Solution**: Both commands now sort by most recent first, so indices should match. Always verify with `list` first.
+**Solution**: Both commands sort by most recent first and print the **global** index,
+so the number from `search`/`list` works directly with `absorb`. Verify with `list` first.
 
 ## Performance Notes
 
 - **List**: Fast (<1s for 50+ conversations)
-- **Search**: Fast, filters in-memory
-- **Absorb**: Fast, outputs full conversation text
+- **Search**: Fast, in-memory filter
+- **Absorb**: Fast, emits full conversation text (tool output is capped at 12k chars)
 
 ## Data Privacy
 
 - All processing is local
-- No data sent externally
+- No data is sent externally (no network calls of any kind)
 - Reads only `~/.claude/history.jsonl`
-- No cache or persistence beyond session
+- No cache or persistence beyond the current run
+
+See `SECURITY.md` for the full security posture and scanner notes.
 
 ## Version History
 
 ### v1.0.0
 - Initial release
-- List, search, absorb commands
+- `list`, `search`, `absorb` commands
 - Structured output format
-- Portuguese language support
+- Python entrypoint: `hermes claude-chat` CLI + `claude_chat` agent tool

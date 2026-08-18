@@ -88,15 +88,11 @@ hermes claude-chat search rebase
 hermes claude-chat absorb 1
 ```
 
-> **Repo privado:** o shorthand `owner/repo` resolve para HTTPS. Para
-> autenticar sem digitar senha, este setup usa um rewrite global do git que
-> redireciona `https://github.com/` → `git@github.com:` (chave SSH):
-> ```bash
-> git config --global url."git@github.com:".insteadOf "https://github.com/"
-> ```
-> Sem isso, o clone do instalador falha auth (o git não lê token de env).
-> Alternativa sempre disponível: instalar pela URL SSH completa:
-> `hermes plugins install git@github.com:erickstryck/claude-chat-index.git --enable`.
+O repo é **público**, então o shorthand `owner/repo` funciona direto,
+sem chave SSH ou token (clone anônimo por HTTPS):
+
+> Alternativa: instalar pela URL completa —
+> `hermes plugins install https://github.com/erickstryck/claude-chat-index.git --enable`.
 
 Para atualizar no futuro:
 
@@ -107,7 +103,7 @@ hermes plugins update claude-chat-index
 ### Global via npm
 
 ```bash
-git clone git@github.com:erickstryck/claude-chat-index.git
+git clone https://github.com/erickstryck/claude-chat-index.git
 cd claude-chat-index
 npm install -g .        # registra o binário `claude-chat` no PATH
 claude-chat --help
@@ -169,7 +165,7 @@ claude-chat search config
 
 ### `claude-chat absorb <numero>`
 
-Emite o contexto completo da conversa nº `<numero>` (mesma numeração do `list`) em formato pronto para colar em outro agente:
+Emite o contexto completo da conversa nº `<numero>` (mesma numeração do `list`) em formato pronto para uso como contexto de entrada em outra tarefa/agente:
 
 ```
 === CONTEXTO DA CONVERSA CLAUDE PARA HERMES ===
@@ -188,7 +184,7 @@ Total de mensagens: 55
 ...
 === FIM DO CONTEXTO ===
 
-Dica: Copie este output e use como contexto em uma nova tarefa no Hermes.
+Dica: o output acima está formatado para uso como contexto de entrada em outra tarefa/sessão do Hermes.
 ```
 
 > Exemplo sintético (dados fictícios).
@@ -198,7 +194,7 @@ Dica: Copie este output e use como contexto em uma nova tarefa no Hermes.
 ```bash
 claude-chat search "migração de entidades"   # 1. acha a conversa certa
 claude-chat absorb 2                          # 2. gera o contexto
-# 3. cola o output em outra ferramenta/LLM:
+# 3. use o output como contexto de entrada em outra ferramenta/LLM:
 #    "Preciso retomar uma conversa do Claude. Aqui está o contexto: ...
 #     Continue de onde paramos: [o que precisa]"
 ```
@@ -250,7 +246,7 @@ Todo o processamento é local. O plugin **não** envia nada para a rede, não es
 ## Desenvolvimento
 
 ```bash
-git clone git@github.com:erickstryck/claude-chat-index.git && cd claude-chat-index
+git clone https://github.com/erickstryck/claude-chat-index.git && cd claude-chat-index
 npm link            # desenvolvimento: binário claude-chat aponta para o checkout
 node scripts/verify-plugin.mjs   # valide após mudanças
 ```

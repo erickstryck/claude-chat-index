@@ -214,7 +214,7 @@ function absorbSession(sessionIndex) {
   console.log('=== CONTEÚDO DA CONVERSA ===\n');
   console.log(summary.context);
   console.log('\n=== FIM DO CONTEXTO ===');
-  console.log('\nDica: Copie este output e use como contexto em uma nova tarefa no Hermes.');
+  console.log('\nDica: este bloco está formatado para uso como contexto de entrada em outra tarefa do Hermes.');
 }
 
 /**

@@ -83,7 +83,7 @@ crie as sessões para as entidades em @/home/dev/projects/meu-projeto/src/ui/ind
 
 ### Passo 4: Usar o contexto no Hermes
 
-Copie todo o output do Passo 3 e use no Hermes:
+Use o output do Passo 3 como contexto de entrada no Hermes:
 
 ```
 Preciso retomar uma conversa do Claude sobre rebase e migração.
