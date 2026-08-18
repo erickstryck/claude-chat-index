@@ -184,7 +184,7 @@ Total de mensagens: 55
 ...
 === FIM DO CONTEXTO ===
 
-Dica: o output acima está formatado para uso como contexto de entrada em outra tarefa/sessão do Hermes.
+Dica: este bloco está formatado para uso como contexto de entrada em outra tarefa do Hermes.
 ```
 
 > Exemplo sintético (dados fictícios).
@@ -194,7 +194,7 @@ Dica: o output acima está formatado para uso como contexto de entrada em outra 
 ```bash
 claude-chat search "migração de entidades"   # 1. acha a conversa certa
 claude-chat absorb 2                          # 2. gera o contexto
-# 3. use o output como contexto de entrada em outra ferramenta/LLM:
+# 3. use o bloco como contexto de entrada em outra ferramenta/LLM:
 #    "Preciso retomar uma conversa do Claude. Aqui está o contexto: ...
 #     Continue de onde paramos: [o que precisa]"
 ```
