@@ -3,14 +3,14 @@
 /**
  * Claude Chat Index Plugin
  * 
- * Plugin para catalogar, indexar e recuperar conversas do Claude Code.
- * Permite listar conversas por idade (mais recentes primeiro) e absorver
- * o contexto de uma conversa específica no Hermes Agent.
+ * Plugin to catalog, index, and retrieve Claude Code conversations.
+ * Lets you list conversations by age (most recent first) and absorb
+ * the context of a specific conversation into the Hermes Agent.
  * 
- * Uso:
- *   claude-chat list              - Lista todas as conversas do Claude
- *   claude-chat absorb <session>  - Absorve uma conversa específica no contexto
- *   claude-chat search <query>    - Busca conversas por termo
+ * Usage:
+ *   claude-chat list              - Lists all Claude conversations
+ *   claude-chat absorb <session>  - Absorbs a specific conversation into the context
+ *   claude-chat search <query>    - Searches conversations by term
  */
 
 import { readFileSync, existsSync } from 'fs';
@@ -25,11 +25,11 @@ const CLAUDE_HOME = process.env.HOME + '/.claude';
 const HISTORY_FILE = join(CLAUDE_HOME, 'history.jsonl');
 
 /**
- * Lê o arquivo history.jsonl do Claude e retorna todas as conversas
+ * Reads the Claude history.jsonl file and returns all conversations
  */
 function loadHistory() {
   if (!existsSync(HISTORY_FILE)) {
-    console.error('Erro: Arquivo de histórico não encontrado em', HISTORY_FILE);
+    console.error('Error: History file not found at', HISTORY_FILE);
     process.exit(1);
   }
 
@@ -46,7 +46,7 @@ function loadHistory() {
 }
 
 /**
- * Agrupa conversas por sessionId e retorna com metadados
+ * Groups conversations by sessionId and returns them with metadata
  */
 function groupBySession(history) {
   const sessions = new Map();
@@ -59,8 +59,8 @@ function groupBySession(history) {
         sessionId: item.sessionId,
         project: item.project,
         messages: [],
-        // timestamp pode faltar em entradas antigas/corrompidas;
-        // 0 mantém o sort e as datas coerentes (em vez de NaN/'Invalid Date')
+        // timestamp may be missing in old/corrupt entries;
+        // 0 keeps the sort and dates coherent (instead of NaN/'Invalid Date')
         firstSeen: item.timestamp || 0,
         lastSeen: item.timestamp || 0,
         title: null
@@ -74,11 +74,11 @@ function groupBySession(history) {
       timestamp: item.timestamp || 0
     });
     
-    // Atualiza timestamps
+    // Update timestamps
     if (item.timestamp < session.firstSeen) session.firstSeen = item.timestamp;
     if (item.timestamp > session.lastSeen) session.lastSeen = item.timestamp;
     
-    // Tenta extrair título da primeira mensagem do usuário
+    // Tries to extract the title from the first user message
     if (!session.title && item.display.length > 50 && !item.display.startsWith('/')) {
       session.title = item.display.substring(0, 80) + '...';
     }
@@ -88,15 +88,15 @@ function groupBySession(history) {
 }
 
 /**
- * Formata timestamp para data legível
+ * Formats a timestamp into a readable date
  */
 function formatDate(timestamp) {
   const date = new Date(timestamp);
   const now = new Date();
   const diffMs = now - date;
-  // Timestamp no futuro (clock skew): evita "-3 min atrás"
+  // Timestamp in the future (clock skew): avoids "-3 min ago"
   if (diffMs < 0) {
-    return date.toLocaleDateString('pt-BR', {
+    return date.toLocaleDateString('en-US', {
       year: 'numeric', month: 'short', day: 'numeric'
     });
   }
@@ -104,11 +104,11 @@ function formatDate(timestamp) {
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
   
-  if (diffMins < 60) return `${diffMins} min atrás`;
-  if (diffHours < 24) return `${diffHours} h atrás`;
-  if (diffDays < 7) return `${diffDays} dias atrás`;
+  if (diffMins < 60) return `${diffMins} min ago`;
+  if (diffHours < 24) return `${diffHours} h ago`;
+  if (diffDays < 7) return `${diffDays} days ago`;
   
-  return date.toLocaleDateString('pt-BR', {
+  return date.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
     day: 'numeric'
@@ -116,25 +116,25 @@ function formatDate(timestamp) {
 }
 
 /**
- * Lista conversas ordenadas por idade (mais recentes primeiro).
+ * Lists conversations ordered by age (most recent first).
  *
- * Se `query` for fornecido, filtra por termo — MAS o número exibido [N]
- * continua sendo a posição na lista COMPLETA (recency-sorted), igual ao
- * espaço de índices do `absorb`. Assim "absorb <N>" funciona com o número
- * impresso por `list` OU por `search`.
+ * If `query` is given, it filters by term — BUT the number shown [N]
+ * remains the position in the FULL (recency-sorted) list, the same
+ * index space as `absorb`. So "absorb <N>" works with the number
+ * printed by `list` OR by `search`.
  */
 function listSessions(query = null) {
   const history = loadHistory();
   let sessions = groupBySession(history);
 
-  // Ordena ANTES de filtrar, por mais recente primeiro (lastSeen decrescente).
-  // O sort do V8 é estável, então o índice global é determinístico.
+  // Sort BEFORE filtering, by most recent first (lastSeen descending).
+  // The V8 sort is stable, so the global index is deterministic.
   sessions.sort((a, b) => b.lastSeen - a.lastSeen);
 
-  // Marca cada sessão com a posição na lista completa (1-based).
+  // Marks each session with its position in the full list (1-based).
   sessions = sessions.map((s, i) => ({ ...s, globalIndex: i + 1 }));
 
-  // Filtra por query se fornecida (o índice global é preservado)
+  // Filters by query if given (the global index is preserved)
   if (query) {
     const lowerQuery = query.toLowerCase();
     sessions = sessions.filter(s =>
@@ -145,84 +145,84 @@ function listSessions(query = null) {
   }
   
   if (sessions.length === 0) {
-    console.log('Nenhuma conversa encontrada.');
+    console.log('No conversation found.');
     return;
   }
   
   console.log(`\n${'='.repeat(80)}`);
-  console.log(`CONVERSAS DO CLAUDE (${sessions.length} encontradas)`);
+  console.log(`CLAUDE CONVERSATIONS (${sessions.length} found)`);
   console.log(`${'='.repeat(80)}\n`);
   
   sessions.forEach((session, index) => {
     const age = formatDate(session.lastSeen);
     const msgCount = session.messages.length;
-    // `project` pode estar ausente em entradas antigas/corrompidas do histórico
-    const project = session.project?.split('/').pop() || '(desconhecido)';
+    // `project` may be absent in old/corrupt history entries
+    const project = session.project?.split('/').pop() || '(unknown)';
     
     console.log(`[${session.globalIndex}] ${session.sessionId}`);
-    console.log(`    Título: ${session.title || '(sem título)'}`);
-    console.log(`    Projeto: ${project}`);
-    console.log(`    Mensagens: ${msgCount}`);
-    console.log(`    Última atividade: ${age}`);
-    console.log(`    Último acesso: ${new Date(session.lastSeen).toLocaleString('pt-BR')}`);
+    console.log(`    Title: ${session.title || '(untitled)'}`);
+    console.log(`    Project: ${project}`);
+    console.log(`    Messages: ${msgCount}`);
+    console.log(`    Last activity: ${age}`);
+    console.log(`    Last access: ${new Date(session.lastSeen).toLocaleString('en-US')}`);
     console.log('');
   });
   
   console.log(`${'='.repeat(80)}`);
-  console.log('Use: claude-chat absorb <numero>  para absorver uma conversa no contexto');
-  console.log('Ex: claude-chat absorb 1');
+  console.log('Use: claude-chat absorb <number>  to absorb a conversation into the context');
+  console.log('Example: claude-chat absorb 1');
 }
 
 /**
- * Absorve uma conversa específica no contexto do Hermes
+ * Absorbs a specific conversation into the Hermes context
  */
 function absorbSession(sessionIndex) {
   const history = loadHistory();
   let sessions = groupBySession(history);
   
-  // Ordena por mais recente primeiro (igual ao list)
+  // Sort by most recent first (same as list)
   sessions.sort((a, b) => b.lastSeen - a.lastSeen);
   
   const index = parseInt(sessionIndex) - 1;
   if (isNaN(index) || index < 0 || index >= sessions.length) {
-    console.error(`Erro: Índice inválido. Use um número entre 1 e ${sessions.length}`);
+    console.error(`Error: Invalid index. Use a number between 1 and ${sessions.length}`);
     process.exit(1);
   }
   
   const session = sessions[index];
   
-  // Gera um resumo estruturado da conversa
+  // Generates a structured summary of the conversation
   const summary = {
     sessionId: session.sessionId,
     project: session.project,
     title: session.title,
     dateRange: {
-      first: new Date(session.firstSeen).toLocaleString('pt-BR'),
-      last: new Date(session.lastSeen).toLocaleString('pt-BR')
+      first: new Date(session.firstSeen).toLocaleString('en-US'),
+      last: new Date(session.lastSeen).toLocaleString('en-US')
     },
     messageCount: session.messages.length,
     context: session.messages.map(m => m.content).join('\n\n---\n\n')
   };
   
-  // Output formatado para ser absorvido pelo Hermes
-  console.log('=== CONTEXTO DA CONVERSA CLAUDE PARA HERMES ===');
+  // Formatted output to be absorbed by Hermes
+  console.log('=== CLAUDE CONVERSATION CONTEXT FOR HERMES ===');
   console.log(`Session ID: ${summary.sessionId}`);
-  console.log(`Projeto: ${summary.project || '(desconhecido)'}`);
-  console.log(`Título: ${summary.title || '(sem título)'}`);
-  console.log(`Período: ${summary.dateRange.first} até ${summary.dateRange.last}`);
-  console.log(`Total de mensagens: ${summary.messageCount}`);
-  console.log('=== CONTEÚDO DA CONVERSA ===\n');
+  console.log(`Project: ${summary.project || '(unknown)'}`);
+  console.log(`Title: ${summary.title || '(untitled)'}`);
+  console.log(`Period: ${summary.dateRange.first} to ${summary.dateRange.last}`);
+  console.log(`Total messages: ${summary.messageCount}`);
+  console.log('=== CONVERSATION CONTENT ===\n');
   console.log(summary.context);
-  console.log('\n=== FIM DO CONTEXTO ===');
-  console.log('\nDica: este bloco está formatado para uso como contexto de entrada em outra tarefa do Hermes.');
+  console.log('\n=== END OF CONTEXT ===');
+  console.log('\nTip: this block is formatted for use as input context in another Hermes task.');
 }
 
 /**
- * Busca conversas por termo
+ * Searches conversations by term
  */
 function searchSessions(query) {
   if (!query) {
-    console.error('Erro: termo de busca é obrigatório');
+    console.error('Error: a search term is required');
     process.exit(1);
   }
   
@@ -254,13 +254,13 @@ function main() {
       console.log(`
 Claude Chat Index Plugin
 
-Uso:
-  claude-chat list              Lista todas as conversas (mais recentes primeiro)
-  claude-chat search <termo>    Busca conversas por termo
-  claude-chat absorb <numero>   Absorve conversa no contexto (ex: absorb 1)
-  claude-chat --help            Mostra esta ajuda
+Usage:
+  claude-chat list              Lists all conversations (most recent first)
+  claude-chat search <term>     Searches conversations by term
+  claude-chat absorb <number>   Absorbs a conversation into the context (e.g. absorb 1)
+  claude-chat --help            Shows this help
 
-Exemplos:
+Examples:
   claude-chat list
   claude-chat search rebase
   claude-chat absorb 3
@@ -268,8 +268,8 @@ Exemplos:
       break;
       
     default:
-      console.error(`Comando desconhecido: ${command}`);
-      console.log('Use --help para ver a ajuda.');
+      console.error(`Unknown command: ${command}`);
+      console.log('Use --help to see the help.');
       process.exit(1);
   }
 }

@@ -1,129 +1,129 @@
-# Exemplo de Uso: Claude Chat Index
+# Usage Example: Claude Chat Index
 
-Este arquivo demonstra como usar o plugin `claude-chat-index` para recuperar conversas do Claude Code no Hermes Agent.
+This file demonstrates how to use the `claude-chat-index` plugin to retrieve Claude Code conversations in the Hermes Agent.
 
-> **Nota:** todas as saídas abaixo são **sintéticas** (dados fictícios de exemplo).
+> **Note:** all outputs below are **synthetic** (fictional example data).
 
-## Cenário: Retomar uma conversa sobre um rebase
+## Scenario: Resuming a conversation about a rebase
 
-### Passo 1: Listar conversas recentes
+### Step 1: List recent conversations
 
 ```bash
 claude-chat list
 ```
 
-**Saída esperada:**
+**Expected output:**
 ```
 ================================================================================
-CONVERSAS DO CLAUDE (12 encontradas)
+CLAUDE CONVERSATIONS (12 found)
 ================================================================================
 
 [1] a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d
-    Título: resolva os conflitos que apareceram quando eu dei o rebase com a main...
-    Projeto: meu-projeto
-    Mensagens: 41
-    Última atividade: 1 min atrás
-    Último acesso: 17/07/2026, 15:35:29
+    Title: resolve the conflicts that showed up when I rebased with main...
+    Project: my-project
+    Messages: 41
+    Last activity: 1 min ago
+    Last access: 07/17/2026, 3:35:29 PM
 
 [2] f0e1d2c3-b4a5-4968-8776-655443322110
-    Título: crie para mim um md com tudo que é necessário para se criar o fluxo de migração...
-    Projeto: meu-projeto
-    Mensagens: 5
-    Última atividade: 2 h atrás
-    Último acesso: 17/07/2026, 13:21:15
+    Title: create an md for me with everything needed to build the migration flow...
+    Project: my-project
+    Messages: 5
+    Last activity: 2 h ago
+    Last access: 07/17/2026, 1:21:15 PM
 ...
 ```
 
-### Passo 2: Buscar conversas por termo (opcional)
+### Step 2: Search conversations by term (optional)
 
 ```bash
 claude-chat search config
 ```
 
-**Saída esperada:**
+**Expected output:**
 ```
 ================================================================================
-CONVERSAS DO CLAUDE (3 encontradas)
+CLAUDE CONVERSATIONS (3 found)
 ================================================================================
 
 [1] a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d
-    Título: resolva os conflitos que apareceram quando eu dei o rebase com a main...
-    Projeto: meu-projeto
+    Title: resolve the conflicts that showed up when I rebased with main...
+    Project: my-project
 ...
 ```
 
-### Passo 3: Absorver a conversa no contexto do Hermes
+### Step 3: Absorb the conversation into Hermes context
 
 ```bash
 claude-chat absorb 1
 ```
 
-**Saída esperada:**
+**Expected output:**
 ```
-=== CONTEXTO DA CONVERSA CLAUDE PARA HERMES ===
+=== CLAUDE CONVERSATION CONTEXT FOR HERMES ===
 Session ID: a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d
-Projeto: /home/dev/projects/meu-projeto
-Título: resolva os conflitos que apareceram quando eu dei o rebase com a main...
-Período: 16/07/2026, 11:01:37 até 17/07/2026, 15:35:29
-Total de mensagens: 41
-=== CONTEÚDO DA CONVERSA ===
+Project: /home/dev/projects/my-project
+Title: resolve the conflicts that showed up when I rebased with main...
+Period: 07/16/2026, 11:01:37 AM to 07/17/2026, 3:35:29 PM
+Total messages: 41
+=== CONVERSATION CONTENT ===
 
-resolva os conflitos que apareceram quando eu dei o rebase com a main
-
----
-
-o sdk deve ser mantido sempre na última versão
+resolve the conflicts that showed up when I rebased with main
 
 ---
 
-crie as sessões para as entidades em @/home/dev/projects/meu-projeto/src/ui/index.tsx...
+the sdk must always be kept on the latest version
+
+---
+
+create the sessions for the entities in @/home/dev/projects/my-project/src/ui/index.tsx...
 ...
-=== FIM DO CONTEXTO ===
+=== END OF CONTEXT ===
 ```
 
-### Passo 4: Usar o contexto no Hermes
+### Step 4: Use the context in Hermes
 
-Use o bloco do Passo 3 como contexto de entrada no Hermes:
+Use the block from Step 3 as input context in Hermes:
 
 ```
-Preciso retomar uma conversa do Claude sobre rebase e migração.
+I need to resume a Claude conversation about a rebase and a migration.
 
-Aqui está o contexto da conversa anterior:
+Here is the context of the previous conversation:
 
-[COLE O OUTPUT DO PASSO 3 AQUI]
+[PASTE THE STEP 3 OUTPUT HERE]
 
-Continuação: preciso seguir com o próximo passo do fluxo.
+Continuing: I need to proceed with the next step of the flow.
 ```
 
-## Comandos Disponíveis
+## Available Commands
 
-| Comando | Descrição |
-|---------|-----------|
-| `list` | Lista todas as conversas (mais recentes primeiro) |
-| `search <termo>` | Busca conversas por termo |
-| `absorb <numero>` | Absorve conversa no contexto |
-| `--help` | Mostra ajuda |
+| Command | Description |
+|---------|-------------|
+| `list` | Lists all conversations (most recent first) |
+| `search <term>` | Searches conversations by term |
+| `absorb <number>` | Absorbs a conversation into the context |
+| `--help` | Shows help |
 
-## Exemplos de Uso
+## Usage Examples
 
-### Listar todas as conversas
+### List all conversations
 ```bash
 claude-chat list
 ```
 
-### Buscar por "migration"
+### Search for "migration"
 ```bash
 claude-chat search migration
 ```
 
-### Absorver conversa 3
+### Absorb conversation 3
 ```bash
 claude-chat absorb 3
 ```
 
-## Integração com o Hermes
+## Integration with Hermes
 
-Com o plugin habilitado, também há o comando nativo e a tool:
+With the plugin enabled, there is also the native command and the tool:
 
 ```bash
 hermes claude-chat list
@@ -131,10 +131,10 @@ hermes claude-chat search config
 hermes claude-chat absorb 1
 ```
 
-Ou via tool `claude_chat` (invocada pelo próprio agente).
+Or via the `claude_chat` tool (invoked by the agent itself).
 
-## Notas
+## Notes
 
-- As conversas são listadas por data de última atividade (mais recentes primeiro)
-- O índice exibido é **global** (posição na lista completa), então o número de `search` é o mesmo aceito por `absorb`
-- O output do `absorb` está formatado para ser facilmente copiado e usado no Hermes
+- Conversations are listed by last-activity date (most recent first)
+- The index shown is **global** (position in the full list), so the number from `search` is the same one accepted by `absorb`
+- The `absorb` output is formatted to be easily copied and used in Hermes

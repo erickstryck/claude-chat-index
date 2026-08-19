@@ -1,86 +1,85 @@
 # Claude Chat Index
 
-Plugin CLI para **catalogar, indexar e recuperar conversas do Claude Code** — feito para integrar com o [Hermes Agent](https://hermes-agent.nousresearch.com/docs).
+A CLI plugin to **catalog, index, and retrieve Claude Code conversations** — built to integrate with the [Hermes Agent](https://hermes-agent.nousresearch.com/docs).
 
-Permite listar as conversas do Claude Code ordenadas por data, buscar por termo e **absorver** o contexto de uma conversa específica para continuar o trabalho em outro agente (ex.: retomar no Hermes de onde o Claude parou).
+It lets you list Claude Code conversations ordered by date, search by term, and **absorb** the context of a specific conversation to continue the work in another agent (e.g. resume in Hermes from where Claude stopped).
 
-- **Zero dependências** — apenas Node.js (>= 18, usa ESM nativo)
-- **100% local** — nenhum dado sai da máquina
-- **Lingua**: saída em pt-BR
+- **Zero dependencies** — just Node.js (>= 18, uses native ESM)
+- **100% local** — no data leaves the machine
+- **Language**: output in en-US
 
 ---
 
-## Como funciona (arquitetura)
+## How it works (architecture)
 
 ```
-┌─────────────────────────┐         ┌──────────────────────────────┐
-│  ~/.claude/history.jsonl │         │      claude-chat CLI         │
-│  (gravado pelo Claude    │  lê     │                              │
-│   Code a cada prompt do  │ ──────▶ │  loadHistory()  → parse JSONL│
-│   usuário)               │         │  groupBySession() → agrupa   │
-└─────────────────────────┘         │  por sessionId               │
-                                    │  sort por lastSeen desc      │
-┌─────────────────────────┐         │                              │
-│  ~/.claude/projects/**/  │  n.l.   │  list / search / absorb      │
-│  <sessionId>.jsonl       │ ◀────── │                              │
-│  (transcrições completas,│         └──────────────────────────────┘
-│  incl. respostas do      │
-│  assistente)             │
+┌─────────────────────────┐         ┌──────────────────────────────────┐
+│  ~/.claude/history.jsonl │         │        claude-chat CLI           │
+│  (written by Claude Code │ reads   │                                  │
+│   on each user prompt)   │ ──────▶ │  loadHistory()  → parse JSONL    │
+└─────────────────────────┘         │  groupBySession() → group        │
+                                    │  by sessionId                    │
+┌─────────────────────────┐         │  sort by lastSeen desc           │
+│  ~/.claude/projects/**/  │ not     │                                  │
+│  <sessionId>.jsonl       │ read    │  list / search / absorb          │
+│  (full transcripts,      │ ◀────── │                                  │
+│   incl. assistant        │         └──────────────────────────────────┘
+│   responses)             │
 └─────────────────────────┘
 ```
 
-1. **Fonte de dados**: o Claude Code grava cada prompt do usuário em `~/.claude/history.jsonl` (um JSON por linha). O plugin lê **apenas** esse arquivo — ver [Schema dos dados](#schema-dos-dados).
-2. **Agrupamento**: `groupBySession()` agrupa as linhas por `sessionId`, calculando `firstSeen`/`lastSeen`, contagem de mensagens e um título heurístico (primeira mensagem longa que não comece com `/`, truncada a 80 chars).
-3. **Ordenação**: todas as conversas são ordenadas por `lastSeen` decrescente (mais recentes primeiro) **antes** de qualquer filtro — tanto no `list` quanto no `absorb`. O índice `[N]` exibido é sempre a posição nessa lista completa, então o `absorb <N>` usa o mesmo número impresso por `list` ou `search`.
-4. **Saída**: `absorb` emite um bloco de texto estruturado (com marcadores `===`) pensado para ser copiado e colado como contexto em outra ferramenta/LLM.
+1. **Data source**: Claude Code writes each user prompt to `~/.claude/history.jsonl` (one JSON per line). The plugin reads **only** that file — see [Data schema](#data-schema).
+2. **Grouping**: `groupBySession()` groups lines by `sessionId`, computing `firstSeen`/`lastSeen`, a message count, and a heuristic title (the first long message that does not start with `/`, truncated to 80 chars).
+3. **Ordering**: all conversations are sorted by `lastSeen` descending (most recent first) **before** any filter — both in `list` and in `absorb`. The `[N]` index shown is always the position in that full list, so `absorb <N>` uses the same number printed by `list` or `search`.
+4. **Output**: `absorb` emits a structured text block (with `===` markers) designed to be copied and pasted as context into another tool/LLM.
 
-> **Nota importante**: o `history.jsonl` contém apenas as **mensagens do usuário** (os prompts). As respostas do assistente ficam nas transcrições completas em `~/.claude/projects/<projeto>/<sessionId>.jsonl` — esse diretório **não** é lido por este plugin (ver [Limitações](#limitações)).
+> **Important note**: `history.jsonl` contains only **user messages** (the prompts). Assistant responses live in the full transcripts at `~/.claude/projects/<project>/<sessionId>.jsonl` — that directory is **not** read by this plugin (see [Limitations](#limitations)).
 
-## Estrutura do projeto
+## Project structure
 
 ```
 claude-chat-index/
-├── package.json               # Manifesto npm (type: module, bin: claude-chat)
-├── plugin.yaml                # Manifesto do plugin Hermes (install/update/enable)
-├── __init__.py                # Entrypoint Python: registra CLI `hermes claude-chat` + tool `claude_chat`
-├── README.md                  # Esta documentação
-├── EXAMPLE.md                 # Exemplo de uso ponta a ponta (list → search → absorb)
+├── package.json               # npm manifest (type: module, bin: claude-chat)
+├── plugin.yaml                # Hermes plugin manifest (install/update/enable)
+├── __init__.py                # Python entrypoint: registers CLI `hermes claude-chat` + tool `claude_chat`
+├── README.md                  # This documentation
+├── EXAMPLE.md                 # End-to-end usage example (list → search → absorb)
 ├── src/
-│   └── cli.js                 # CLI principal (o plugin em si — arquivo único)
+│   └── cli.js                 # Main CLI (the plugin itself — single file)
 ├── bin/
-│   └── claude-chat            # Wrapper bash para o PATH (override: CLAUDE_CHAT_PLUGIN_DIR)
+│   └── claude-chat            # Bash wrapper for the PATH (override: CLAUDE_CHAT_PLUGIN_DIR)
 ├── scripts/
-│   └── verify-plugin.mjs      # 12 verificações hermetic (fixture em $HOME temporário)
+│   └── verify-plugin.mjs      # 12 hermetic checks (fixture in a temporary $HOME)
 └── docs/
-    └── usage-guide.md         # Guia de referência: casos de uso, padrões de integração
+    └── usage-guide.md         # Reference guide: use cases, integration patterns
 ```
 
-### Anatomia de `src/cli.js`
+### Anatomy of `src/cli.js`
 
-| Função | Responsabilidade |
-|--------|------------------|
-| `loadHistory()` | Lê `~/.claude/history.jsonl`, faz parse linha a linha (tolera linhas corrompidas) |
-| `groupBySession(history)` | Agrupa por `sessionId`, monta metadados (título, período, mensagens) |
-| `formatDate(ts)` | Data relativa ("2 h atrás") para < 7 dias, data `pt-BR` após |
-| `listSessions(query?)` | Comando `list` (e base do `search`) — com filtro opcional por termo |
-| `searchSessions(query)` | Comando `search` — thin wrapper sobre `listSessions(query)` |
-| `absorbSession(index)` | Comando `absorb` — emite o bloco de contexto estruturado |
-| `main()` | Parser de argumentos e roteamento dos comandos |
+| Function | Responsibility |
+|----------|----------------|
+| `loadHistory()` | Reads `~/.claude/history.jsonl`, parses line by line (tolerates corrupt lines) |
+| `groupBySession(history)` | Groups by `sessionId`, builds metadata (title, period, messages) |
+| `formatDate(ts)` | Relative date ("2 h ago") for < 7 days, `en-US` date after |
+| `listSessions(query?)` | The `list` command (and the basis of `search`) — with an optional term filter |
+| `searchSessions(query)` | The `search` command — a thin wrapper over `listSessions(query)` |
+| `absorbSession(index)` | The `absorb` command — emits the structured context block |
+| `main()` | Argument parser and command routing |
 
-## Instalação
+## Installation
 
-### Via Hermes (recomendado)
+### Via Hermes (recommended)
 
-Um único comando instala **e habilita** o plugin:
+A single command installs **and enables** the plugin:
 
 ```bash
 hermes plugins install erickstryck/claude-chat-index --enable
 ```
 
-Com `--enable`, o plugin registra duas superfícies no Hermes:
+With `--enable`, the plugin registers two surfaces in Hermes:
 
-- **Comando CLI nativo** — `hermes claude-chat {list, search <termo>, absorb <n>}`
-- **Tool do agente** — `claude_chat` (o próprio Hermes lista/busca/absorve conversas do Claude Code via tool call, sem terminal)
+- **Native CLI command** — `hermes claude-chat {list, search <term>, absorb <n>}`
+- **Agent tool** — `claude_chat` (Hermes itself lists/searches/absorbs Claude Code conversations via a tool call, no terminal needed)
 
 ```bash
 hermes claude-chat list
@@ -88,170 +87,170 @@ hermes claude-chat search rebase
 hermes claude-chat absorb 1
 ```
 
-O repo é **público**, então o shorthand `owner/repo` funciona direto,
-sem chave SSH ou token (clone anônimo por HTTPS):
+The repo is **public**, so the `owner/repo` shorthand works directly,
+with no SSH key or token (anonymous clone over HTTPS):
 
-> Alternativa: instalar pela URL completa —
+> Alternative: install by full URL —
 > `hermes plugins install https://github.com/erickstryck/claude-chat-index.git --enable`.
 
-Para atualizar no futuro:
+To update in the future:
 
 ```bash
 hermes plugins update claude-chat-index
 ```
 
-### Global via npm
+### Globally via npm
 
 ```bash
 git clone https://github.com/erickstryck/claude-chat-index.git
 cd claude-chat-index
-npm install -g .        # registra o binário `claude-chat` no PATH
+npm install -g .        # registers the `claude-chat` binary on the PATH
 claude-chat --help
 ```
 
-### Manual (sem npm)
+### Manual (no npm)
 
 ```bash
-node /caminho/para/claude-chat-index/src/cli.js list
+node /path/to/claude-chat-index/src/cli.js list
 ```
 
-### Wrapper standalone (sem o plugin habilitado)
+### Standalone wrapper (without the plugin enabled)
 
-Se você instalar **sem** `--enable`, o `bin/claude-chat` (wrapper bash) ainda
-expõe o comando `claude-chat` no PATH — basta copiar para um diretório no
-PATH (ex.: `~/.hermes/claude-chat`). O override de localização é a variável
-`CLAUDE_CHAT_PLUGIN_DIR`.
+If you install **without** `--enable`, the `bin/claude-chat` (bash wrapper) still
+exposes the `claude-chat` command on the PATH — just copy it to a directory on
+your PATH (e.g. `~/.hermes/claude-chat`). The location override is the
+`CLAUDE_CHAT_PLUGIN_DIR` environment variable.
 
-### Skill do Hermes
+### Hermes skill
 
-Com o plugin habilitado, a skill correspondente (`claude-chat-index`) já sabe
-invocar `hermes claude-chat ...` — então comandos naturais funcionam direto:
-*"Listar conversas do Claude Code"*, *"Buscar conversas sobre rebase"*,
-*"Absorver conversa 2"*. O comando nativo torna o wrapper `claude-chat` no
-PATH opcional.
+With the plugin enabled, the corresponding skill (`claude-chat-index`) already
+knows how to invoke `hermes claude-chat ...` — so natural commands work directly:
+*"List Claude Code conversations"*, *"Search conversations about rebase"*,
+*"Absorb conversation 2"*. The native command makes the `claude-chat` wrapper
+on the PATH optional.
 
-## Comandos
+## Commands
 
 ### `claude-chat list`
 
-Lista todas as conversas, mais recentes primeiro.
+Lists all conversations, most recent first.
 
 ```
 ================================================================================
-CONVERSAS DO CLAUDE (5 encontradas)
+CLAUDE CONVERSATIONS (5 found)
 ================================================================================
 
 [1] a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d
-    Título: crie um script que exporta o relatório mensal em CSV...
-    Projeto: meu-projeto
-    Mensagens: 5
-    Última atividade: 13 h atrás
-    Último acesso: 17/08/2026, 20:17:50
+    Title: create a script that exports the monthly report as CSV...
+    Project: my-project
+    Messages: 5
+    Last activity: 13 h ago
+    Last access: 08/17/2026, 8:17:50 PM
 ...
 ```
 
-> Exemplo sintético (dados fictícios).
+> Synthetic example (fictional data).
 
-### `claude-chat search <termo>`
+### `claude-chat search <term>`
 
-Busca por termo (case-insensitive) em três campos: **título**, **caminho do projeto** e **conteúdo das mensagens**.
+Searches by term (case-insensitive) across three fields: **title**, **project path**, and **message content**.
 
-O número `[N]` exibido é a **posição na lista completa** (recency-sorted), **não** na lista filtrada — portanto o mesmo número que aparece em um `search` funciona diretamente no `absorb <N>`.
+The `[N]` number shown is the **position in the full list** (recency-sorted), **not** in the filtered list — so the same number that appears in a `search` works directly with `absorb <N>`.
 
 ```bash
 claude-chat search rebase
 claude-chat search config
 ```
 
-### `claude-chat absorb <numero>`
+### `claude-chat absorb <number>`
 
-Emite o contexto completo da conversa nº `<numero>` (mesma numeração do `list`) em formato pronto para uso como contexto de entrada em outra tarefa/agente:
+Emits the full context of conversation number `<number>` (same numbering as `list`) in a format ready to use as input context in another task/agent:
 
 ```
-=== CONTEXTO DA CONVERSA CLAUDE PARA HERMES ===
+=== CLAUDE CONVERSATION CONTEXT FOR HERMES ===
 Session ID: a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d
-Projeto: /home/dev/projects/meu-projeto
-Título: crie um script que exporta o relatório mensal em CSV...
-Período: 17/07/2026, 09:35:01 até 17/07/2026, 13:22:51
-Total de mensagens: 55
-=== CONTEÚDO DA CONVERSA ===
+Project: /home/dev/projects/my-project
+Title: create a script that exports the monthly report as CSV...
+Period: 07/17/2026, 9:35:01 AM to 07/17/2026, 1:22:51 PM
+Total messages: 55
+=== CONVERSATION CONTENT ===
 
-<mensagem 1>
+<message 1>
 
 ---
 
-<mensagem 2>
+<message 2>
 ...
-=== FIM DO CONTEXTO ===
+=== END OF CONTEXT ===
 
-Dica: este bloco está formatado para uso como contexto de entrada em outra tarefa do Hermes.
+Tip: this block is formatted for use as input context in another Hermes task.
 ```
 
-> Exemplo sintético (dados fictícios).
+> Synthetic example (fictional data).
 
-### Fluxo típico
+### Typical flow
 
 ```bash
-claude-chat search "migração de entidades"   # 1. acha a conversa certa
-claude-chat absorb 2                          # 2. gera o contexto
-# 3. use o bloco como contexto de entrada em outra ferramenta/LLM:
-#    "Preciso retomar uma conversa do Claude. Aqui está o contexto: ...
-#     Continue de onde paramos: [o que precisa]"
+claude-chat search "entity migration"   # 1. find the right conversation
+claude-chat absorb 2                     # 2. generate the context
+# 3. use the block as input context in another tool/LLM:
+#    "I need to resume a Claude conversation. Here is the context: ...
+#     Continue from where we left off: [what is needed]"
 ```
 
-## Schema dos dados
+## Data schema
 
-Fonte: `~/.claude/history.jsonl` — um JSON por linha, **uma linha por prompt do usuário**:
+Source: `~/.claude/history.jsonl` — one JSON per line, **one line per user prompt**:
 
-| Campo | Tipo | Descrição |
-|-------|------|-----------|
-| `sessionId` | `string` (UUID) | Identificador da conversa. O plugin agrupa por ele. |
-| `project` | `string` | Caminho absoluto do diretório do projeto. |
-| `timestamp` | `number` | Epoch em **milissegundos** (UTC). |
-| `display` | `string` | Texto do prompt do usuário. |
-| `pastedContents` | `object?` | Conteúdo colado/expandido (ex.: `@arquivo`), opcional — não usado pelo plugin. |
+| Field | Type | Description |
+|-------|------|-------------|
+| `sessionId` | `string` (UUID) | Conversation identifier. The plugin groups by this. |
+| `project` | `string` | Absolute path of the project directory. |
+| `timestamp` | `number` | Epoch in **milliseconds** (UTC). |
+| `display` | `string` | Text of the user prompt. |
+| `pastedContents` | `object?` | Pasted/expanded content (e.g. `@file`), optional — not used by the plugin. |
 
-Exemplo (valores sintéticos):
+Example (synthetic values):
 
 ```json
-{"sessionId":"a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d","project":"/home/dev/projects/meu-projeto","display":"crie um script que exporta o relatório mensal...","timestamp":1786102110312,"pastedContents":{}}
+{"sessionId":"a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d","project":"/home/dev/projects/my-project","display":"create a script that exports the monthly report...","timestamp":1786102110312,"pastedContents":{}}
 ```
 
-Linhas que falhem no `JSON.parse` são **ignoradas** (o histórico é append-only e pode conter resíduos).
+Lines that fail `JSON.parse` are **ignored** (the history is append-only and can contain residue).
 
-## Verificação / testes
+## Verification / tests
 
-O script `scripts/verify-plugin.mjs` roda 10 verificações ad-hoc (existência dos arquivos, execução dos 3 comandos, estrutura do output do `absorb`, erro com índice inválido). Ele localiza o CLI automaticamente em relação à própria posição no repo, ou use a variável `PLUGIN_PATH` para apontar para outra instalação:
+The `scripts/verify-plugin.mjs` script runs 10 ad-hoc checks (file existence, running the 3 commands, the `absorb` output structure, error on an invalid index). It locates the CLI automatically relative to its own position in the repo, or use the `PLUGIN_PATH` variable to point at another installation:
 
 ```bash
 node scripts/verify-plugin.mjs
-# ou:
-PLUGIN_PATH=/caminho/para/outra/src/cli.js node scripts/verify-plugin.mjs
+# or:
+PLUGIN_PATH=/path/to/other/src/cli.js node scripts/verify-plugin.mjs
 ```
 
-Pré-requisitos: o Claude Code já ter sido usado (existe `~/.claude/history.jsonl` com ao menos 1 conversa) e `node` no PATH.
+Prerequisites: Claude Code has been used at least once (`~/.claude/history.jsonl` exists with at least 1 conversation) and `node` is on the PATH.
 
-## Limitações
+## Limitations
 
-- **Somente mensagens do usuário**: o `history.jsonl` não contém as respostas do Claude. Para a transcrição completa (usuário + assistente), leia `~/.claude/projects/<projeto-slugificado>/<sessionId>.jsonl` — extensão futura natural deste plugin.
-- **Um prompt = uma "mensagem"**: não há granularidade por turnos de ferramenta/dentro da sessão.
-- **Título heurístico**: a primeira mensagem curta (ou que comece com `/`, como slash-commands) não vira título; a conversa aparece como "(sem título)".
-- **Sem cache**: tudo é relido do disco a cada execução (rápido para centenas de conversas; verifique o desempenho antes de usar com históricos de dezenas de milhares de linhas).
-- O diretório `~/.claude/sessions/` é citado no manifesto, mas não é lido pelo código atual.
+- **User messages only**: `history.jsonl` does not contain Claude's responses. For the full transcript (user + assistant), read `~/.claude/projects/<slugified-project>/<sessionId>.jsonl` — a natural future extension of this plugin.
+- **One prompt = one "message"**: there is no granularity for tool turns / inside the session.
+- **Heuristic title**: the first short message (or one that starts with `/`, like slash-commands) does not become a title; the conversation shows up as "(untitled)".
+- **No cache**: everything is re-read from disk on every run (fast for hundreds of conversations; check performance before using with histories of tens of thousands of lines).
+- The `~/.claude/sessions/` directory is cited in the manifest but not read by the current code.
 
-## Privacidade
+## Privacy
 
-Todo o processamento é local. O plugin **não** envia nada para a rede, não escreve arquivos e não mantém cache.
+All processing is local. The plugin **does not** send anything over the network, does not write files, and keeps no cache.
 
-## Desenvolvimento
+## Development
 
 ```bash
 git clone https://github.com/erickstryck/claude-chat-index.git && cd claude-chat-index
-npm link            # desenvolvimento: binário claude-chat aponta para o checkout
-node scripts/verify-plugin.mjs   # valide após mudanças
+npm link            # development: claude-chat binary points at the checkout
+node scripts/verify-plugin.mjs   # validate after changes
 ```
 
-Para publicar: `npm publish --access public` (o pacote está pronto — `bin: claude-chat`).
+To publish: `npm publish --access public` (the package is ready — `bin: claude-chat`).
 
 ## License
 

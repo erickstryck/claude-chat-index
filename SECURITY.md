@@ -1,19 +1,19 @@
-# Segurança do claude-chat-index
+# claude-chat-index Security
 
-## O que este plugin faz (e o que não faz)
+## What this plugin does (and what it does not)
 
-| Ato | Suportado? | Onde |
-|-----|-----------|------|
-| Ler `~/.claude/history.jsonl` (histórico local do Claude Code) | **Sim** | `src/cli.js` (`fs.readFileSync` / `fs.existsSync`) |
-| Escrever qualquer arquivo | **Não** | — |
-| Fazer qualquer requisição de rede (http, https, dns, socket) | **Não** | — |
-| Criar subprocessos | **Sim** | `__init__.py` — **um único** `subprocess.run` (ver abaixo) |
-| Ler variáveis de ambiente | **Sim** | `HOME` (para achar o histórico), `CLAUDE_CHAT_PLUGIN_DIR` (override de localização) |
-| Manter cache ou estado entre execuções | **Não** | — |
+| Action | Supported? | Where |
+|--------|-----------|-------|
+| Read `~/.claude/history.jsonl` (Claude Code's local history) | **Yes** | `src/cli.js` (`fs.readFileSync` / `fs.existsSync`) |
+| Write any file | **No** | — |
+| Make any network request (http, https, dns, socket) | **No** | — |
+| Create subprocesses | **Yes** | `__init__.py` — a **single** `subprocess.run` (see below) |
+| Read environment variables | **Yes** | `HOME` (to find the history), `CLAUDE_CHAT_PLUGIN_DIR` (location override) |
+| Keep a cache or state between runs | **No** | — |
 
-## O único subprocesso
+## The only subprocess
 
-`__init__.py` chama o CLI Node para executar os comandos `list` / `search` / `absorb`:
+`__init__.py` invokes the Node CLI to run the `list` / `search` / `absorb` commands:
 
 ```python
 subprocess.run(
@@ -22,30 +22,30 @@ subprocess.run(
 )
 ```
 
-Características de segurança:
+Security characteristics:
 
-- **Sem shell** — a chamada é uma lista de argumentos (não `shell=True`), então não há injeção de shell via `cli_args`.
-- **Alvo fixo** — sempre `node` + o `src/cli.js` **desta instalação** (via `Path(__file__).parent`); o `node` é resolvido do PATH com `shutil.which`.
-- **Timeout** — 60 s por chamada.
-- `src/cli.js` (o que é executado) só importa `fs.readFileSync` / `fs.existsSync` e `path` — **não há** `http`, `net`, `child_process`, `fetch`, `exec` ou `spawn` nesse arquivo.
+- **No shell** — the call is a list of arguments (not `shell=True`), so there is no shell injection via `cli_args`.
+- **Fixed target** — always `node` + the `src/cli.js` **of this installation** (via `Path(__file__).parent`); `node` is resolved from PATH with `shutil.which`.
+- **Timeout** — 60 s per call.
+- `src/cli.js` (what is executed) only imports `fs.readFileSync` / `fs.existsSync` and `path` — there is **no** `http`, `net`, `child_process`, `fetch`, `exec` or `spawn` in that file.
 
-## O que o plugin lê e para onde vai
+## What the plugin reads and where it goes
 
-- **Lê**: `~/.claude/history.jsonl` (um JSON por linha — prompt do usuário, projeto, timestamp).
-- **Emit**: texto no `stdout` (CLI) ou no resultado da tool (Hermes). **Nenhuma saída deixa a máquina** — o resultado vai apenas para o terminal do operador ou para o contexto da própria sessão do agente local.
+- **Reads**: `~/.claude/history.jsonl` (one JSON per line — user prompt, project, timestamp).
+- **Emits**: text on `stdout` (CLI) or in the tool result (Hermes). **No output leaves the machine** — the result goes only to the operator's terminal or to the context of the local agent's own session.
 
-## Auditoria
+## Auditing
 
-- `node scripts/verify-plugin.mjs` — 12 testes herméticos (fixture em `$HOME` temporário).
-- O repositório é público; qualquer mudança na `main` passa por PR com 1 aprovação (ruleset `protect-main`).
-- Issues de segurança: abra uma **issue** no repositório (não commite nada sensível em PRs públicos).
+- `node scripts/verify-plugin.mjs` — 12 hermetic tests (fixture in a temporary `$HOME`).
+- The repository is public; any change to `main` goes through a PR with 1 approval (ruleset `protect-main`).
+- Security issues: open an **issue** in the repository (do not commit anything sensitive in public PRs).
 
-## Nota sobre scanners de segurança
+## Note on security scanners
 
-Instaladores com scan (ex.: o do Hermes Agent) podem marcar:
+Installers with scanning (e.g. the Hermes Agent one) may flag:
 
-- `execution` em `__init__.py` (o `subprocess.run` acima) — **esperado e documentado** aqui; é o mecanismo pelo qual o plugin expõe o CLI ao Hermes.
-- `supply_chain` em instruções de `git clone` / `npm install` no README — são instruções de instalação, não código executado pelo plugin.
-- `exfiltration` / `persistence` em frases de documentação — heurísticas de texto; o código não contém instrução de exfiltração nem altera configurações de persistência.
+- `execution` in `__init__.py` (the `subprocess.run` above) — **expected and documented** here; it is the mechanism by which the plugin exposes the CLI to Hermes.
+- `supply_chain` on `git clone` / `npm install` instructions in the README — these are installation instructions, not code executed by the plugin.
+- `exfiltration` / `persistence` in documentation sentences — text heuristics; the code contains no exfiltration instruction and does not alter any persistence settings.
 
-Nenhum desses achados corresponde a comportamento real do plugin, segundo a tabela acima.
+None of these findings corresponds to actual plugin behavior, per the table above.

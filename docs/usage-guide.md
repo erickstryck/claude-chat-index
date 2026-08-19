@@ -46,9 +46,9 @@ claude-chat search <project-or-topic>
 
 1. **Load the skill**: `skill_view(name='claude-chat-index')`
 2. **Use natural commands**:
-   - "Listar conversas do Claude Code"
-   - "Buscar conversas sobre [termo]"
-   - "Absorver conversa [numero]"
+   - "List Claude Code conversations"
+   - "Search conversations about [term]"
+   - "Absorb conversation [number]"
 
 ### With Other Tools
 
@@ -60,13 +60,13 @@ The `absorb` block is plain text — pipe it into any tool that accepts an input
 The `absorb` command outputs structured context:
 
 ```
-=== CONTEXTO DA CONVERSA CLAUDE PARA HERMES ===
+=== CLAUDE CONVERSATION CONTEXT FOR HERMES ===
 Session ID: <uuid>
-Projeto: <path>
-Título: <conversation summary>
-Período: <start> até <end>
-Total de mensagens: <count>
-=== CONTEÚDO DA CONVERSA ===
+Project: <path>
+Title: <conversation summary>
+Period: <start> to <end>
+Total messages: <count>
+=== CONVERSATION CONTENT ===
 
 <message 1>
 
@@ -74,7 +74,7 @@ Total de mensagens: <count>
 
 <message 2>
 ...
-=== FIM DO CONTEXTO ===
+=== END OF CONTEXT ===
 ```
 
 ## Common Search Terms
@@ -92,7 +92,7 @@ title, project path, and message text):
 
 ## Troubleshooting
 
-### "Nenhuma conversa encontrada"
+### "No conversation found"
 
 **Cause**: No conversations in history, or the search term doesn't match.
 
@@ -101,7 +101,7 @@ title, project path, and message text):
 2. Try broader search terms
 3. Verify Claude Code was used (`~/.claude/history.jsonl` exists)
 
-### "Arquivo de histórico não encontrado"
+### "History file not found"
 
 **Cause**: Claude Code hasn't been used yet or the history file was deleted.
 

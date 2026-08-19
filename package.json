@@ -1,7 +1,7 @@
 {
   "name": "claude-chat-index",
   "version": "1.0.0",
-  "description": "Plugin para catalogar, indexar e recuperar conversas do Claude Code no Hermes Agent",
+  "description": "Plugin to catalog, index, and retrieve Claude Code conversations in the Hermes Agent",
   "type": "module",
   "main": "src/cli.js",
   "scripts": {

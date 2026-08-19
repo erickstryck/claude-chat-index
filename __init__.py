@@ -1,18 +1,18 @@
-"""claude-chat-index plugin — integra o CLI claude-chat ao Hermes Agent.
+"""claude-chat-index plugin — integrates the claude-chat CLI with the Hermes Agent.
 
-Registra duas superfícies quando o plugin está habilitado
+Registers two surfaces when the plugin is enabled
 (``hermes plugins install erickstryck/claude-chat-index --enable``):
 
-* **Comando CLI** — ``hermes claude-chat {list, search <termo>, absorb <n>}``
-  Encaminha para o CLI Node (``src/cli.js``), que lê
-  ``~/.claude/history.jsonl`` (histórico local do Claude Code).
+* **CLI command** — ``hermes claude-chat {list, search <term>, absorb <n>}``
+  Forwards to the Node CLI (``src/cli.js``), which reads
+  ``~/.claude/history.jsonl`` (Claude Code's local history).
 
-* **Tool do agente** — ``claude_chat`` (action: list | search | absorb)
-  Permite ao próprio Hermes listar/buscar/absorver conversas do Claude Code
-  diretamente via tool call, sem precisar de terminal.
+* **Agent tool** — ``claude_chat`` (action: list | search | absorb)
+  Lets Hermes itself list/search/absorb Claude Code conversations
+  directly via a tool call, without needing a terminal.
 
-O plugin é um wrapper fino: toda a lógica de parse/agrupamento fica no
-``src/cli.js`` (zero dependências, 100% local). Nada sai da máquina.
+The plugin is a thin wrapper: all parse/grouping logic lives in
+``src/cli.js`` (zero dependencies, 100% local). Nothing leaves the machine.
 """
 
 from __future__ import annotations
@@ -28,14 +28,14 @@ from typing import Any, Dict, Optional
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Localizando o CLI Node (src/cli.js)
+# Locating the Node CLI (src/cli.js)
 # ---------------------------------------------------------------------------
 
 def _plugin_dir() -> Path:
-    """Diretório do plugin (o repo é o plugin: root == plugin dir).
+    """The plugin directory (the repo IS the plugin: root == plugin dir).
 
-    Sobrepõe via CLAUDE_CHAT_PLUGIN_DIR para layouts não-padrão
-    (mesma convenção do wrapper bin/claude-chat).
+    Overridden via CLAUDE_CHAT_PLUGIN_DIR for non-standard layouts
+    (same convention as the bin/claude-chat wrapper).
     """
     override = os.environ.get("CLAUDE_CHAT_PLUGIN_DIR")
     if override:
@@ -48,16 +48,16 @@ def _cli_js() -> Path:
 
 
 def _check_requirements() -> bool:
-    """Gate da tool: só aparece se `node` e o CLI existirem."""
+    """Tool gate: only appears if `node` and the CLI exist."""
     return shutil.which("node") is not None and _cli_js().exists()
 
 
 # ---------------------------------------------------------------------------
-# Execução do CLI
+# CLI execution
 # ---------------------------------------------------------------------------
 
 def _run_cli(*cli_args: str, timeout: int = 60) -> tuple[bool, str, str]:
-    """Roda o CLI Node e devolve (ok, stdout, stderr)."""
+    """Runs the Node CLI and returns (ok, stdout, stderr)."""
     try:
         proc = subprocess.run(
             ["node", str(_cli_js()), *cli_args],
@@ -67,13 +67,13 @@ def _run_cli(*cli_args: str, timeout: int = 60) -> tuple[bool, str, str]:
         )
         return proc.returncode == 0, proc.stdout or "", proc.stderr or ""
     except subprocess.TimeoutExpired:
-        return False, "", f"claude-chat {' '.join(cli_args)}: timeout após {timeout}s"
-    except Exception as e:  # pragma: no cover — défensive
-        return False, "", f"erro ao executar o CLI: {e}"
+        return False, "", f"claude-chat {' '.join(cli_args)}: timeout after {timeout}s"
+    except Exception as e:  # pragma: no cover — defensive
+        return False, "", f"error running the CLI: {e}"
 
 
 # ---------------------------------------------------------------------------
-# Tool do agente
+# Agent tool
 # ---------------------------------------------------------------------------
 
 def _json(payload: Dict[str, Any]) -> str:
@@ -118,17 +118,17 @@ CLAUDE_CHAT_SCHEMA: Dict[str, Any] = {
     },
 }
 
-# Absorb pode devolver conversas longas; corta para caber no contexto sem
-# estourar o budget de tool result.
+# Absorb may return long conversations; truncate to fit the context without
+# blowing the tool-result budget.
 _MAX_TOOL_OUTPUT = 12000
 
 
 def handle_claude_chat(args: Dict[str, Any], **_kw) -> str:
-    """Handler da tool claude_chat — encaminha para o CLI Node."""
+    """Handler for the claude_chat tool — forwards to the Node CLI."""
     if not _check_requirements():
         return _err(
-            "claude-chat-index indisponível: 'node' não está no PATH ou "
-            f"src/cli.js não encontrado em {_cli_js()}"
+            "claude-chat-index unavailable: 'node' is not on the PATH or "
+            f"src/cli.js not found at {_cli_js()}"
         )
 
     action = str(args.get("action", ""))
@@ -137,53 +137,53 @@ def handle_claude_chat(args: Dict[str, Any], **_kw) -> str:
     if action == "search":
         query = args.get("query")
         if not query or not str(query).strip():
-            return _err("query é obrigatório quando action=search")
+            return _err("query is required when action=search")
         cli_args.append(str(query).strip())
     elif action == "absorb":
         index = args.get("index")
         if index is None:
-            return _err("index é obrigatório quando action=absorb")
+            return _err("index is required when action=absorb")
         try:
             cli_args.append(str(int(index)))
         except (TypeError, ValueError):
-            return _err("index deve ser um inteiro", got=repr(index))
+            return _err("index must be an integer", got=repr(index))
     elif action != "list":
-        return _err(f"action inválida: {action!r} (use list, search ou absorb)")
+        return _err(f"invalid action: {action!r} (use list, search or absorb)")
 
     ok, out, err = _run_cli(*cli_args)
     if not ok:
-        return _err((err or out).strip() or "falha desconhecida no CLI",
+        return _err((err or out).strip() or "unknown failure in the CLI",
                     command=f"claude-chat {' '.join(cli_args)}")
 
     output = out.strip()
     truncated = len(output) > _MAX_TOOL_OUTPUT
     if truncated:
-        output = output[:_MAX_TOOL_OUTPUT] + f"\n... [truncado; {len(output)} chars de um total maior — use 'list'/'search' para refinar]"
+        output = output[:_MAX_TOOL_OUTPUT] + f"\n... [truncated; {len(output)} chars of a larger total — use 'list'/'search' to refine]"
     return _json({"success": True, "truncated": truncated, "output": output})
 
 
 # ---------------------------------------------------------------------------
-# Comando CLI nativo: hermes claude-chat ...
+# Native CLI command: hermes claude-chat ...
 # ---------------------------------------------------------------------------
 
 def _register_cli(subparser) -> None:
-    """Monta a árvore argparse de `hermes claude-chat`."""
+    """Builds the argparse tree for `hermes claude-chat`."""
     subs = subparser.add_subparsers(dest="claude_chat_cmd")
 
-    subs.add_parser("list", help="Lista conversas do Claude Code (mais recentes primeiro)")
+    subs.add_parser("list", help="List Claude Code conversations (most recent first)")
 
-    search_p = subs.add_parser("search", help="Busca conversas por termo")
-    search_p.add_argument("query", nargs="+", help="termo de busca (case-insensitive)")
+    search_p = subs.add_parser("search", help="Search conversations by term")
+    search_p.add_argument("query", nargs="+", help="search term (case-insensitive)")
 
-    absorb_p = subs.add_parser("absorb", help="Absorve o contexto de uma conversa")
-    absorb_p.add_argument("index", type=int, help="número da conversa (conforme list/search)")
+    absorb_p = subs.add_parser("absorb", help="Absorb a conversation's context")
+    absorb_p.add_argument("index", type=int, help="conversation number (as in list/search)")
 
 
 def _claude_chat_command(args) -> int:
-    """Handler do comando `hermes claude-chat` — devolve exit code."""
+    """Handler for the `hermes claude-chat` command — returns an exit code."""
     cmd = getattr(args, "claude_chat_cmd", None)
     if not cmd:
-        print("usage: hermes claude-chat {list, search <termo>, absorb <n>}")
+        print("usage: hermes claude-chat {list, search <term>, absorb <n>}")
         return 2
 
     cli_args = [cmd]
@@ -201,15 +201,15 @@ def _claude_chat_command(args) -> int:
 
 
 # ---------------------------------------------------------------------------
-# Registro
+# Registration
 # ---------------------------------------------------------------------------
 
 def register(ctx) -> None:
-    """Registro do plugin — chamado uma vez pelo loader quando habilitado."""
+    """Plugin registration — called once by the loader when enabled."""
     if not _check_requirements():
         logger.warning(
-            "claude-chat-index: 'node' ou src/cli.js ausente — "
-            "nada registrado. CLI em %s", _cli_js()
+            "claude-chat-index: 'node' or src/cli.js missing — "
+            "nothing registered. CLI at %s", _cli_js()
         )
         return
 
@@ -228,8 +228,8 @@ def register(ctx) -> None:
         setup_fn=_register_cli,
         handler_fn=_claude_chat_command,
         description=(
-            "Cataloga e recupera conversas do Claude Code (~/.claude/history.jsonl). "
-            "Ex.: hermes claude-chat list | hermes claude-chat search rebase | "
+            "Catalogs and retrieves Claude Code conversations (~/.claude/history.jsonl). "
+            "E.g. hermes claude-chat list | hermes claude-chat search rebase | "
             "hermes claude-chat absorb 1"
         ),
     )
